@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 int main()
-{
+{ //problema 2
     FILE* fisier;
     if(fopen_s(&fisier, "laborator1", "r") != 0)
     {
