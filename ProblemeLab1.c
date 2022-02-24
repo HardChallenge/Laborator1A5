@@ -22,6 +22,6 @@ int main()
         }
 
     }
-    fclose(fisier);
+    
     return 0;
 }
