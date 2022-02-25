@@ -1,0 +1,13 @@
+a=200;
+
+bancnote(s){
+    if(s%10 != 0){
+        return false;
+    }
+    if(s==10 || s==30){
+        return false;
+    }
+    return true;
+}
+
+b = bancnote(a);
