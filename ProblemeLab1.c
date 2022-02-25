@@ -4,43 +4,7 @@
 #include <stdlib.h>
 #include<string.h>
 //problema 4
-bool isPrime(int n)
-
-{
-
-    for (int tr = 2; tr < n / 2; tr++)
-
-        if ((n % tr ) == 0)
-
-            return false;
-
-    return true;
-
-}
-
-int main()
-
-{
-
-    int n;
-
-    std::cout << "Enter a number:";
-
-    std::cin >> n;
-
-    if (isPrime(n))
-
-        std::cout << n << " is prime !";
-
-    else 
-
-        std::cout << n << " is NOT prime !";
-
-    return 0;
-
-}
-
-
+//raspunsuri: n / 2, if (n%2==0), false, n
 
 int main()
 { //problema 2
