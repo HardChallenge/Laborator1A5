@@ -1,3 +1,4 @@
+#pragma once
 class Canvas
 
 {
@@ -24,5 +25,7 @@ public:
     void Print(); // shows what was printed
 
     void Clear(); // clears the canvas
+
+    void Fill(char a);
 
 };
