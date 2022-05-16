@@ -6,10 +6,50 @@
 #include <functional>
 #include <stdexcept>
 using std::string, std::function, std::map, std::vector;
-// the CommandManager class should implement a mini terminal that receive commands and dispatches them.
-// example: copy a.jpg b.jpg
-// this will search the map for a "copy" command, and if it finds it, it will invoke its callback with a vector made of {"a.jpg", "b.jpg"}
-// no global variables allowed
+
+class MyException : public std::exception
+{
+protected:
+    string error;
+    string name;
+
+public:
+    MyException();
+    MyException(string error) : error(error)
+    {
+        MyException::what();
+    }
+
+    const char *what() noexcept
+    {
+        return error.c_str();
+    }
+};
+
+class OpenFileException : public MyException
+{
+public:
+    OpenFileException(string name) : MyException("Cannot open file: " + name)
+    {
+        std::cout << error << "\n";
+    }
+};
+class ReadFileException : public MyException
+{
+public:
+    ReadFileException(string name) : MyException("Cannot read from file: " + name)
+    {
+        std::cout << error << "\n";
+    }
+};
+class WriteFileException : public MyException
+{
+public:
+    WriteFileException(string name) : MyException("Cannot write on file: " + name)
+    {
+        std::cout << error << "\n";
+    }
+};
 
 class CommandManager
 {
@@ -19,13 +59,6 @@ private:
 public:
     void add(string name, function<void(vector<string>)> fn);
 
-    // run shall read a line from stdin in a loop, split it by whitespaces.
-    // the first word will be the command name. if no word has been found, it will do nothing
-    // then it will search the map for the name, and it will invoke the callback if it founds it
-    // or it will show a message if it can't find it
-    // the args for the callback will not contain the command name
-    // if the `stop` command is found, the function will return
-    // try doing this yourself; if you spent too much time on this, look at https://gist.github.com/xTachyon/9e698a20ce6dfcae9a483b28778af9fb
     void run();
 };
 
@@ -74,10 +107,8 @@ void CommandManager::run()
                 it->second(vector);
             }
         }
-        catch (std::exception &e)
+        catch (MyException &e)
         {
-            fprintf(stderr, e.what());
-            printf("\n");
         }
 
         if (ok == false)
@@ -107,7 +138,7 @@ int main()
     {
         if (access(args[0].c_str(), F_OK) == -1)
         {
-            throw std::runtime_error("The file doesn't exist!");
+            throw OpenFileException(args[0]);
         }
         FILE *fd = fopen(args[0].c_str(), "a");
         for (int i = 1; i < args.size(); i++)
@@ -115,12 +146,12 @@ int main()
             if (fprintf(fd, args[i].c_str()) < 0)
             {
                 fclose(fd);
-                throw std::runtime_error("Cannot write a character!");
+                throw WriteFileException(args[0]);
             }
             if (fprintf(fd, " ") < 0)
             {
                 fclose(fd);
-                throw std::runtime_error("Cannot write a blank space!");
+                throw WriteFileException(args[0]);
             }
         }
         fclose(fd);
@@ -136,11 +167,11 @@ int main()
     {
         if (args[0] == "" || args[1] == "")
         {
-            throw std::runtime_error("Give the file's names!");
+            throw ReadFileException(args[0]);
         }
         if (access(args[0].c_str(), F_OK) == -1 || access(args[1].c_str(), F_OK) == -1)
         {
-            throw std::runtime_error("One of the specified files doesn't exist!");
+            throw OpenFileException(args[0]);
         }
         auto source = fopen(args[0].c_str(), "r");
         auto destination = fopen(args[1].c_str(), "w");
@@ -174,6 +205,22 @@ int main()
     };
 
     manager.add("resize", resize);
+
+    auto alloc = [](vector<string> memory)
+    {
+        long long size = stoi(memory[0]);
+        if (size <= 0)
+            throw std::runtime_error("You cannot allocate a negative amount of bytes!");
+        long pages = sysconf(_SC_PHYS_PAGES);
+        long page_size = sysconf(_SC_PAGE_SIZE);
+        std::cout << pages * page_size;
+        if (size > pages * page_size)
+            throw std::runtime_error("Your memory < the amount you want to allocate :(");
+
+        auto x = malloc(size);
+    };
+
+    manager.add("alloc", alloc);
 
     manager.run();
 }
