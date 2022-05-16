@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <functional>
+#include <stdexcept>
 using std::string, std::function, std::map, std::vector;
 // the CommandManager class should implement a mini terminal that receive commands and dispatches them.
 // example: copy a.jpg b.jpg
@@ -64,12 +65,19 @@ void CommandManager::run()
         vector.push_back(word);
 
         it = commands.find(vector[0]);
-
-        if (it != commands.end())
+        try
         {
-            vector.erase(vector.begin());
-            ok = true;
-            it->second(vector);
+            if (it != commands.end())
+            {
+                vector.erase(vector.begin());
+                ok = true;
+                it->second(vector);
+            }
+        }
+        catch (std::exception &e)
+        {
+            fprintf(stderr, e.what());
+            printf("\n");
         }
 
         if (ok == false)
@@ -85,9 +93,6 @@ void CommandManager::run()
 int main()
 {
     CommandManager manager;
-    // number_of_errors represents the number of IO errors (eg. file errors) that happened in the commands
-    // this is only relevant for the append and copy commands
-    unsigned number_of_errors = 0;
 
     auto ping = [](vector<string> args)
     { printf("pong!\n"); };
@@ -98,48 +103,44 @@ int main()
 
     manager.add("count", count);
 
-    // the first argument will be treated as a file name
-    // the rest of the arguments will be appended to that file with a space as delimiter
-    // remember to count the errors, if any
-    auto append = [&number_of_errors](vector<string> args)
+    auto append = [](vector<string> args)
     {
         if (access(args[0].c_str(), F_OK) == -1)
         {
-            number_of_errors++;
-            printf("Fisierul nu exista!\n");
-            return;
+            throw std::runtime_error("The file doesn't exist!");
         }
         FILE *fd = fopen(args[0].c_str(), "a");
         for (int i = 1; i < args.size(); i++)
         {
             if (fprintf(fd, args[i].c_str()) < 0)
-                number_of_errors++;
+            {
+                fclose(fd);
+                throw std::runtime_error("Cannot write a character!");
+            }
             if (fprintf(fd, " ") < 0)
-                number_of_errors++;
+            {
+                fclose(fd);
+                throw std::runtime_error("Cannot write a blank space!");
+            }
         }
         fclose(fd);
     };
     manager.add("append", append);
 
-    // will print the number of times the command was called
-    // do not capture any reference for this lambda
-    auto times = [times = 0](vector<string> args) mutable
-    {
-        times++;
-        std::cout << "Function called " << times << " times.";
+    auto times = [](vector<string> args) {
+
     };
     manager.add("times", times);
 
-    // copy a file; args[0] will provide the source, and args[1] the destination
-    // make sure it works with binary files (test it with an image)
-    // remember to count the errors, if any
-    auto copy = [&number_of_errors](vector<string> args)
+    auto copy = [](vector<string> args)
     {
+        if (args[0] == "" || args[1] == "")
+        {
+            throw std::runtime_error("Give the file's names!");
+        }
         if (access(args[0].c_str(), F_OK) == -1 || access(args[1].c_str(), F_OK) == -1)
         {
-            number_of_errors++;
-            printf("Unul dintre fisiere nu exista!\n");
-            return;
+            throw std::runtime_error("One of the specified files doesn't exist!");
         }
         auto source = fopen(args[0].c_str(), "r");
         auto destination = fopen(args[1].c_str(), "w");
@@ -175,6 +176,4 @@ int main()
     manager.add("resize", resize);
 
     manager.run();
-
-    printf("number of errors: %u\ndone!\n", number_of_errors);
 }
